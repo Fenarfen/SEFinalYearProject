@@ -1,0 +1,105 @@
+﻿@page "/login"
+
+@using CustardRM.Common.Interfaces;
+@using CustardRM.Common.Models.Requests;
+@inject IPasswordHasher PasswordHasher
+@inject ICookieService CookieService;
+@inject NavigationManager Navigation
+@inject HttpClient HttpClient
+
+<h3>Sign In</h3>
+
+<div>
+    <label>Email:</label>
+    <input @bind="Email" />
+    @if (!string.IsNullOrWhiteSpace(EmailErrorMessage))
+    {
+        <div style="color:red">@EmailErrorMessage</div>
+    }
+</div>
+
+<div>
+    <label>Password:</label>
+    <input @bind="Password" type="password" />
+    @if (!string.IsNullOrWhiteSpace(PasswordErrorMessage))
+    {
+        <div style="color:red">@PasswordErrorMessage</div>
+    }
+</div>
+
+<button @onclick="SignIn">Sign In</button>
+
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div style="color:red">@ErrorMessage</div>
+}
+
+@code {
+    private string Email;
+    private string Password;
+    private string EmailErrorMessage;
+    private string PasswordErrorMessage;
+    private string ErrorMessage;
+
+    private async Task SignIn()
+    {
+        if (string.IsNullOrEmpty(Email))
+        {
+            EmailErrorMessage = "Required";
+        }
+        else
+        {
+            EmailErrorMessage = string.Empty;
+        }
+
+        if (string.IsNullOrEmpty(Password))
+        {
+            PasswordErrorMessage = "Required";
+        }
+        else
+        {
+            PasswordErrorMessage = string.Empty;
+        }
+
+        if (!string.IsNullOrEmpty(PasswordErrorMessage) || !string.IsNullOrEmpty(EmailErrorMessage))
+        {
+            return;
+        }
+
+        var (hash, salt) = PasswordHasher.HashPassword(Password);
+
+        LoginRequest request = new LoginRequest()
+        {
+            Email = Email,
+            Password = Password
+        };
+
+        Console.WriteLine("Sending log in request");
+        var response = await HttpClient.PostAsJsonAsync("https://localhost:7276/api/user/signin", request);
+        string responseMessage = await response.Content.ReadAsStringAsync();
+
+        if (response.IsSuccessStatusCode)
+        {
+            CookieService.SetCookie("token", responseMessage);
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            int statusCode = (int)response.StatusCode;
+
+            if (statusCode == 401) // Unauthorised
+            {
+                ErrorMessage = "Username and/or password is incorrect.";
+            }
+            else if (statusCode == 500) // Internal Server Error
+            {
+                ErrorMessage = $"Server Error: {responseMessage}";
+            }
+            else // Fallback for other errors
+            {
+                ErrorMessage = $"An unexpected error occurred.\n{responseMessage}";
+            }
+        }
+    }
+}
