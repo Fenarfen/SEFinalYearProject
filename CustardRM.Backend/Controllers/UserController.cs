@@ -14,21 +14,17 @@ using System.Runtime.CompilerServices;
 
 namespace CustardRM.Backend.Controllers;
 
-public class AuthController : Controller
+public class UserController : Controller
 {
 	private readonly IDatabaseService _databaseService;
 	private readonly IPasswordHasher _passwordHasher;
 	private readonly IJwtTokenService _jwtTokenService;
 
-	public AuthController(IDatabaseService databaseService, IPasswordHasher passwordHasher, IJwtTokenService jwtTokenService)
+	public UserController(IDatabaseService databaseService, IPasswordHasher passwordHasher, IJwtTokenService jwtTokenService)
 	{
 		_databaseService = databaseService;
 		_passwordHasher = passwordHasher;
 		_jwtTokenService = jwtTokenService;
-	}
-	public IActionResult Index()
-	{
-		return View();
 	}
 
 	[HttpPost("api/user/signin")]

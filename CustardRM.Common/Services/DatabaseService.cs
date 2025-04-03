@@ -12,6 +12,8 @@ using Microsoft.Extensions.Configuration;
 using CustardRM.Common.Models.Requests;
 using CustardRM.Common.Services;
 using Azure.Core;
+using CustardRM.Common.Models.DTOs;
+using static CustardRM.Common.Models.Entities.Inventory;
 
 namespace CustardRM.Common.Services;
 
@@ -24,7 +26,8 @@ public class DatabaseService : IDatabaseService
 	public DatabaseService(IConfiguration config)
 	{
 		_config = config;
-		_connString = _config.GetConnectionString("DefaultConnection");
+		_connString = _config.GetConnectionString("DefaultConnection")?? 
+			throw new Exception("Cannot find DefaultConnection in appsettings.json");
 		_passwordHasher = new PasswordHasher();
 	}
 
@@ -112,4 +115,73 @@ public class DatabaseService : IDatabaseService
 
 		return result > 0;
 	}
+
+    public List<Inventory.StockItem> GetStockItems()
+    {
+        using var connection = CreateConnection();
+
+        var sql = @"SELECT * FROM StockItem";
+
+        var stockItems = connection.Query<StockItem>(sql).ToList();
+
+        return stockItems;
+    }
+
+    public Inventory.StockItem GetStockItemByID(int id)
+    {
+        using var connection = CreateConnection();
+
+        var sql = @"SELECT * FROM StockItem WHERE ID = @ID";
+
+        var stockItem = connection.Query<StockItem>(sql, new { ID = id }).FirstOrDefault();
+
+        return stockItem;
+    }
+
+	public List<Category> GetCategories()
+	{
+        using var connection = CreateConnection();
+
+        var sql = @"SELECT * FROM Category";
+
+        var result = connection.Query<Category>(sql).ToList();
+
+        return result;
+    }
+
+	public Category GetCategoryByID(int id)
+	{
+        using var connection = CreateConnection();
+
+        var sql = @"SELECT * FROM Category where CategoryID = @CategoryID";
+
+        var category = connection.Query<Category>(sql, new { CategoryID = id }).FirstOrDefault();
+
+        return category;
+    }
+
+	public List<Category> GetLinkedCategoriesByStockItemID(int id)
+	{
+        using var connection = CreateConnection();
+
+        var sql = @"select c.* from StockItem si
+					join StockItemCategoryLink cl on si.ID = cl.StockItemID
+					join Category c on cl.CategoryID = c.CategoryID
+					where si.ID = @ID";
+
+        var categories = connection.Query<Category>(sql, new { ID = id }).ToList();
+
+        return categories;
+    }
+
+    public List<Subcategory> GetSubcategoriesByCategoryID(int CategoryID)
+	{
+        using var connection = CreateConnection();
+
+        var sql = @"select * from Subcategory where CategoryID = @CategoryID";
+
+        var subcategories = connection.Query<Subcategory>(sql, new { CategoryID = CategoryID }).ToList();
+
+        return subcategories;
+    }
 }
