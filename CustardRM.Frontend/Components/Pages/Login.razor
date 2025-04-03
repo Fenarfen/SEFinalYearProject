@@ -2,10 +2,12 @@
 
 @using CustardRM.Common.Interfaces;
 @using CustardRM.Common.Models.Requests;
+@using CustardRM.Common.Services
 @inject IPasswordHasher PasswordHasher
 @inject ICookieService CookieService;
 @inject NavigationManager Navigation
-@inject HttpClient HttpClient
+@inject HttpClientService HttpService
+@inject IJSRuntime JSRuntime
 
 <h3>Sign In</h3>
 
@@ -76,12 +78,12 @@
         };
 
         Console.WriteLine("Sending log in request");
-        var response = await HttpClient.PostAsJsonAsync("https://localhost:7276/api/user/signin", request);
+        var response = await HttpService.SendPost("/api/user/signin", request);
         string responseMessage = await response.Content.ReadAsStringAsync();
 
         if (response.IsSuccessStatusCode)
         {
-            CookieService.SetCookie("token", responseMessage);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", responseMessage);
             Navigation.NavigateTo("/");
         }
         else
